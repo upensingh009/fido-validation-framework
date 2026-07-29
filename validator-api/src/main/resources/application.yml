@@ -4,3 +4,8 @@ server:
 spring:
   application:
     name: fido-validator-api
+
+cassandra:
+  contact-points: localhost:9042
+  keyspace-name: fido
+  local-datacenter: dc1

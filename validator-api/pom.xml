@@ -34,6 +34,12 @@
             <artifactId>validator-common</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
+        <!-- Cassandra driver for the API module (used for application-level integration) -->
+        <dependency>
+            <groupId>com.datastax.oss</groupId>
+            <artifactId>java-driver-core</artifactId>
+            <version>4.18.0</version>
+        </dependency>
     </dependencies>
 
     <build>

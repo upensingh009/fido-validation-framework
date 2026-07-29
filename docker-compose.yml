@@ -7,18 +7,26 @@ services:
       - "8080:8080"
     environment:
       - SPRING_PROFILES_ACTIVE=local
-    depends_on: []
+    depends_on:
+      - cassandra
 
-  postgres:
-    image: postgres:15
+  cassandra:
+    image: cassandra:4.1
     environment:
-      POSTGRES_USER: fido
-      POSTGRES_PASSWORD: fido
-      POSTGRES_DB: fido
+      - CASSANDRA_CLUSTER_NAME=fido-cluster
+      - CASSANDRA_DC=dc1
+      - CASSANDRA_ENDPOINT_SNITCH=GossipingPropertyFileSnitch
     ports:
-      - "5432:5432"
+      - "9042:9042"
     volumes:
-      - pgdata:/var/lib/postgresql/data
+      - cassandra_data:/var/lib/cassandra
+
+  playwright:
+    image: mcr.microsoft.com/playwright:focal
+    environment:
+      - CI=true
+    depends_on:
+      - validator-api
 
 volumes:
-  pgdata:
+  cassandra_data:
