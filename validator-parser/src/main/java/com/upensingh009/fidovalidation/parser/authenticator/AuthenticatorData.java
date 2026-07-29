@@ -7,7 +7,8 @@ public record AuthenticatorData(byte[] rpIdHash,
                                 int signCount,
                                 boolean attestedCredentialDataIncluded,
                                 boolean extensionsIncluded,
-                                byte[] remaining) {
+                                AttestedCredentialData attestedCredentialData,
+                                byte[] extensions) {
 
     public String rpIdHashHex() {
         StringBuilder sb = new StringBuilder();
@@ -23,7 +24,7 @@ public record AuthenticatorData(byte[] rpIdHash,
                 ", signCount=" + signCount +
                 ", attested=" + attestedCredentialDataIncluded +
                 ", ext=" + extensionsIncluded +
-                ", remainingLen=" + (remaining == null ? 0 : remaining.length) +
+                ", attested=" + (attestedCredentialData == null ? "<none>" : attestedCredentialData.toString()) +
                 '}';
     }
 }
