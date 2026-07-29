@@ -1,0 +1,16 @@
+.idea/
+target/
+**/target/
+*.iml
+*.log
+/.mvn/
+.mvn/
+.DS_Store
+/.env
+
+# docker
+docker-compose.override.yml
+
+# IntelliJ
+out/
+
