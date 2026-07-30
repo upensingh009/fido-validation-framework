@@ -1,0 +1,1 @@
+Added placeholder fixtures for registration, assertion, tampered signature and tampered attestation. Updated run_jmeter.sh to auto-load fixtures when present and no CLI payload overrides are provided. Use these fixtures as examples; replace with real artifacts or run Playwright to generate real ones.

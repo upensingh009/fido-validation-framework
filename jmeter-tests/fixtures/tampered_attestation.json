@@ -1,0 +1,9 @@
+{
+  "id": "example-cred-id-base64url",
+  "rawId": "example-rawid-base64url",
+  "type": "public-key",
+  "response": {
+    "clientDataJSON": "eyJ0eXBlIjoi...",
+    "attestationObject": "o2NhdHR...tampered"
+  }
+}
