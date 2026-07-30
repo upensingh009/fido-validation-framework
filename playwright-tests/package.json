@@ -1,0 +1,13 @@
+{
+  "name": "playwright-tests",
+  "version": "1.0.0",
+  "description": "Playwright E2E tests for FIDO server using virtual authenticator",
+  "scripts": {
+    "test": "npx playwright test --project=chromium",
+    "test:headed": "npx playwright test --headed"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.43.0",
+    "axios": "1.4.0"
+  }
+}
