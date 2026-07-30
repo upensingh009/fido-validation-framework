@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.5">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="FIDO Playwright Integrated Flow" enabled="true">
+      <stringProp name="TestPlan.comments">End-to-end flow: get register options from FIDO server -> call Playwright service to create credential -> submit credential to FIDO server</stringProp>
+      <boolProp name="TestPlan.functional_mode">false</boolProp>
+      <boolProp name="TestPlan.tearDown_on_shutdown">true</boolProp>
+      <elementProp name="TestPlan.user_defined_variables" elementType="Arguments">
+        <collectionProp name="Arguments.arguments">
+          <elementProp name="SERVER_SCHEME" elementType="Argument">
+            <stringProp name="Argument.name">SERVER_SCHEME</stringProp>
+            <stringProp name="Argument.value">https</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SERVER_HOST" elementType="Argument">
+            <stringProp name="Argument.name">SERVER_HOST</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SERVER_PORT" elementType="Argument">
+            <stringProp name="Argument.name">SERVER_PORT</stringProp>
+            <stringProp name="Argument.value">8443</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="REGISTER_OPTIONS_PATH" elementType="Argument">
+            <stringProp name="Argument.name">REGISTER_OPTIONS_PATH</stringProp>
+            <stringProp name="Argument.value">/webauthn/register/options</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="SUBMIT_CREDENTIAL_PATH" elementType="Argument">
+            <stringProp name="Argument.name">SUBMIT_CREDENTIAL_PATH</stringProp>
+            <stringProp name="Argument.value">/webauthn/register/submit</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="PLAYWRIGHT_HOST" elementType="Argument">
+            <stringProp name="Argument.name">PLAYWRIGHT_HOST</stringProp>
+            <stringProp name="Argument.value">localhost</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+          <elementProp name="PLAYWRIGHT_PORT" elementType="Argument">
+            <stringProp name="Argument.name">PLAYWRIGHT_PORT</stringProp>
+            <stringProp name="Argument.value">3001</stringProp>
+            <stringProp name="Argument.metadata">=</stringProp>
+          </elementProp>
+        </collectionProp>
+      </elementProp>
+      <stringProp name="TestPlan.user_define_classpath"/>
+    </TestPlan>
+    <hashTree>
+
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Playwright Flow Register + Submit" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">stopthread</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
+          <intProp name="LoopController.loops">1</intProp>
+        </elementProp>
+        <intProp name="ThreadGroup.num_threads">1</intProp>
+        <intProp name="ThreadGroup.ramp_time">1</intProp>
+      </ThreadGroup>
+      <hashTree>
+
+        <!-- 1) Request register options from FIDO server -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Get Register Options" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments"/></elementProp>
+          <stringProp name="HTTPSampler.domain">${SERVER_HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${SERVER_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${SERVER_SCHEME}</stringProp>
+          <stringProp name="HTTPSampler.path">${REGISTER_OPTIONS_PATH}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="postBody" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="body" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"userId":"playwright-user"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JsonPostProcessorGui" testclass="JSONPostProcessor" testname="Save Register Options" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">REGISTER_OPTIONS_RESPONSE</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+          </JSONPostProcessor>
+        </hashTree>
+
+        <!-- 2) Build Playwright request body (JSR223 PreProcessor) -->
+        <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Build Playwright Body" enabled="true">
+          <stringProp name="script">// Groovy preprocessor
+def raw = vars.get('REGISTER_OPTIONS_RESPONSE')
+if (raw == null) {
+    log.error('REGISTER_OPTIONS_RESPONSE missing')
+    throw new org.apache.jorphan.util.JMeterException('REGISTER_OPTIONS_RESPONSE not found')
+}
+// Compose body for Playwright service; raw is JSON string, include as-is
+def serverUrl = vars.get('SERVER_SCHEME') + '://' + vars.get('SERVER_HOST') + ':' + vars.get('SERVER_PORT')
+def body = ['serverUrl': serverUrl, 'publicKeyOptions': new groovy.json.JsonSlurper().parseText(raw)]
+vars.put('PLAYWRIGHT_BODY', groovy.json.JsonOutput.toJson(body))
+</stringProp>
+          <stringProp name="cacheKey">false</stringProp>
+        </JSR223PreProcessor>
+        <hashTree/>
+
+        <!-- 3) Call Playwright service to create credential -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Call Playwright Service - make-credential" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments"/></elementProp>
+          <stringProp name="HTTPSampler.domain">${PLAYWRIGHT_HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${PLAYWRIGHT_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.path">/make-credential</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="postBody" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="body" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${PLAYWRIGHT_BODY}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <stringProp name="HTTPArgument.contentType">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSONPostProcessor guiclass="JsonPostProcessorGui" testclass="JSONPostProcessor" testname="Extract Credential JSON" enabled="true">
+            <stringProp name="JSONPostProcessor.referenceNames">CREDENTIAL_JSON</stringProp>
+            <stringProp name="JSONPostProcessor.jsonPathExprs">$.credential</stringProp>
+            <stringProp name="JSONPostProcessor.match_numbers">0</stringProp>
+            <boolProp name="JSONPostProcessor.compute_concat">false</boolProp>
+          </JSONPostProcessor>
+        </hashTree>
+
+        <!-- 4) Submit credential to FIDO server -->
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Submit Credential to FIDO Server" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments"><collectionProp name="Arguments.arguments"/></elementProp>
+          <stringProp name="HTTPSampler.domain">${SERVER_HOST}</stringProp>
+          <stringProp name="HTTPSampler.port">${SERVER_PORT}</stringProp>
+          <stringProp name="HTTPSampler.protocol">${SERVER_SCHEME}</stringProp>
+          <stringProp name="HTTPSampler.path">${SUBMIT_CREDENTIAL_PATH}</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <elementProp name="postBody" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="body" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">${CREDENTIAL_JSON}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+                <stringProp name="HTTPArgument.contentType">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <ResponseAssertion guiclass="AssertionGui" testclass="ResponseAssertion" testname="Assert 200" enabled="true">
+            <collectionProp name="Asserion.test_strings">
+              <stringProp name="1">200</stringProp>
+            </collectionProp>
+            <stringProp name="Assertion.test_field">Assertion.response_code</stringProp>
+            <boolProp name="Assertion.assume_success">false</boolProp>
+          </ResponseAssertion>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Header Manager - Content-Type" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="Content-Type" elementType="Header">
+                <stringProp name="Header.name">Content-Type</stringProp>
+                <stringProp name="Header.value">application/json</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+        </hashTree>
+
+      </hashTree>
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
